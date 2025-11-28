@@ -237,15 +237,33 @@ class TestCases(unittest.TestCase):
 def main():
     print("MAIN IS RUNNING")
 
-    raw = get_cfb_data("Michigan", 2023)
-    games = process_cfb_data(raw)
+    team = "Michigan"
+    years = [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016]   # <-- add/remove years as needed
 
-    print("Number of processed games:", len(games))
+    all_games = []
 
-    store_cfb_data(games, "cfb.db")   
-    print("Stored games in database.")
+    for y in years:
+        print(f"\nPulling data for {team} in {y}...")
+        raw = get_cfb_data(team, y)
 
-    print(load_cfb_data("cfb.db"))
+        if not raw:
+            print(f"No data found for {y}")
+            continue
+
+        processed = process_cfb_data(raw)
+        print(f"Processed {len(processed)} games from {y}")
+
+        all_games.extend(processed)
+
+    print("\nTotal games across all years:", len(all_games))
+
+    # Store all games in the database
+    store_cfb_data(all_games, "cfb.db")
+
+    # Confirm database row count
+    count = load_cfb_data("cfb.db")
+    print("\nRows currently stored in the database:", count)
+
 
     
 
