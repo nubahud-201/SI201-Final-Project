@@ -47,69 +47,43 @@ def get_cfb_data(team, year):
 
 
 def process_cfb_data(raw_data):
-    '''
-    Processes the retrieved raw game data and extracts the fields we need.
-
-    ARGUMENTS:
-        raw_data: list of game dictionaries from the API
-
-    RETURNS:
-        A list of simplified dictionaries containing:
-        - date
-        - opponent
-        - points_for
-        - points_against
-        - home (1 or 0)
-    '''
     games = []
-    TEAM = "Michigan"   # you can parameterize this if needed
+    TEAM = "Michigan"
+    # updated
 
     for g in raw_data:
-
-        # ---- Safe date extraction (covers ALL CFB API variations) ----
-        date_raw = (
-            g.get("start_date") or
-            g.get("start_time") or
-            g.get("kickoff") or
-            "unknown"
-        )
-
-        # clean something like "2023-10-14T19:00Z"
-        if isinstance(date_raw, str) and "T" in date_raw:
+        # Date
+        date_raw = g.get("startDate", "unknown")
+        if "T" in date_raw:
             date_clean = date_raw.split("T")[0]
         else:
             date_clean = date_raw
 
-        # ---- Opponent logic ----
-        home_team = g.get("home_team", "unknown")
-        away_team = g.get("away_team", "unknown")
+        # Teams and points
+        home_team = g.get("homeTeam", "unknown")
+        away_team = g.get("awayTeam", "unknown")
 
         if home_team == TEAM:
             opponent = away_team
-            points_for = g.get("home_points", 0)
-            points_against = g.get("away_points", 0)
+            points_for = g.get("homePoints", 0)
+            points_against = g.get("awayPoints", 0)
             home = 1
         else:
             opponent = home_team
-            points_for = g.get("away_points", 0)
-            points_against = g.get("home_points", 0)
+            points_for = g.get("awayPoints", 0)
+            points_against = g.get("homePoints", 0)
             home = 0
 
-        # ---- Build cleaned dictionary ----
-        game = {
+        games.append({
             "date": date_clean,
             "opponent": opponent,
             "points_for": points_for,
             "points_against": points_against,
             "home": home
-        }
-
-        games.append(game)
-
-    print(raw_data[0].keys())
-
+        })
 
     return games
+
 
 
 
