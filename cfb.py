@@ -123,10 +123,14 @@ def setup_db(db_name):
     RETURNS:
         cursor, connection
     '''
-    path = os.path.dirname(os.path.abspath(__file__))
-    conn = sqlite3.connect(os.path.join(path, db_name))
+    import sqlite3
+    conn = sqlite3.connect(db_name)
     cur = conn.cursor()
+    print(f"[SETUP] Connected to database: {db_name}")
     return cur, conn
+
+
+
 
 
 def store_cfb_data(games, db_name):
@@ -180,7 +184,7 @@ def load_cfb_data(db_name):
 
     conn.close()
 
-    return [
+    return len( [
         {
             "date": r[0],
             "opponent": r[1],
@@ -189,7 +193,7 @@ def load_cfb_data(db_name):
             "home": r[4]
         }
         for r in rows
-    ]
+    ])
 
 
 
@@ -231,16 +235,21 @@ class TestCases(unittest.TestCase):
 
 
 def main():
-    # Example run (not part of tests)
+    print("MAIN IS RUNNING")
+
     raw = get_cfb_data("Michigan", 2023)
     games = process_cfb_data(raw)
-   # store_cfb_data(games, "cfb.db")
-   # print(load_cfb_data("cfb.db"))
 
-    print (raw)
+    print("Number of processed games:", len(games))
+
+    store_cfb_data(games, "cfb.db")   
+    print("Stored games in database.")
+
+    print(load_cfb_data("cfb.db"))
+
     
 
 
 if __name__ == "__main__":
     main()
-    unittest.main(verbosity=2)
+    #unittest.main(verbosity=2)
