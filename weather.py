@@ -2,24 +2,18 @@ import sqlite3
 import unittest
 import requests
 import os
+from datetime import datetime, timedelta
 
-def get_api_key(filename):
-    '''
-    loads in API key from file 
 
-    ARGUMENTS:  
-        file: file that contains your API key
-    
-    RETURNS:
-        your API key
-    '''
-    base_path = os.path.abspath(os.path.dirname(__file__))
-    full_path = os.path.join(base_path, filename)
-    with open(full_path) as f:
-        api_key = f.read()
-    return api_key
-
-API_KEY = get_api_key('apikey.txt')
+def generate_dates(start, end):
+    start_date = datetime.strptime(start, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    all_dates = []
+    current = start_date
+    while current <= end_date:
+        all_dates.append(current.strftime("%Y-%m-%d"))
+        current += timedelta(days=1)
+    return all_dates
 
 def get_weather_data(long, lat, date, timezone):
     url = f"https://archive-api.open-meteo.com/v1/archive"
@@ -59,23 +53,36 @@ def setup_db(db_name):
     cur = conn.cursor()
     return cur, conn
 
+def make_table(cur, conn):
+    cur.execute("""
+            CREATE TABLE IF NOT EXISTS Weather (
+                weather_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date INTEGER,
+                temp_mean INTEGER,
+                wind_speed INTEGER NULL,
+                cloud_cover INTEGER,
+                precipitation INTEGER
+                )    
+                """)
+    conn.commit()
 
+def grab_dates(curr, conn):
+    
+
+    pass
 class TestCases(unittest.TestCase):
     def setUp(self):
-        self.weather_key = get_api_key('apikey.txt')
-
-    def test_get_api_key(self):                     
-        hidden_key = get_api_key('apikey.txt')
-        self.assertEqual(API_KEY, hidden_key)
-    
+        pass
     def test_weather(self):
         w_data = process_weather_data(42.2808, 83.7430, '2025-09-02', "America/New_York")
         expected = {'date': '2025-09-02', 'temp_mean': [33.5], 'wind_speed': [10.8], 'cloud_cover': [100], 'precipitation': [0.039]}
         self.assertEqual(w_data, expected)
         
 def main():
-    w_data = process_weather_data(42.2808, 83.7430, '2025-09-02', "America/New_York")
-    print(w_data)
+    dates = generate_dates("2025-09-01", "2025-11-25")
+    cur, conn = setup_db("weather.db")
+    make_table(cur, conn)  
+
     
 
 if __name__ == '__main__':

@@ -158,7 +158,7 @@ def load_cfb_data(db_name):
 
     conn.close()
 
-    return len( [
+    return [
         {
             "date": r[0],
             "opponent": r[1],
@@ -167,7 +167,7 @@ def load_cfb_data(db_name):
             "home": r[4]
         }
         for r in rows
-    ])
+    ]
 
 
 
