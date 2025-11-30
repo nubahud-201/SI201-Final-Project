@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 
 
 def generate_dates(start, end):
+    """
+    generate a list of dates depending on a date range from a starting date to an ending date
+    INPUT: start (string), end (string)
+    OUTPUT: all_dates (list)
+    """
     start_date = datetime.strptime(start, "%Y-%m-%d").date()
     end_date = datetime.strptime(end, "%Y-%m-%d").date()
     all_dates = []
@@ -16,6 +21,11 @@ def generate_dates(start, end):
     return all_dates
 
 def get_weather_data(long, lat, date, timezone):
+    """
+    query openmeteo api to get weather data depending on a date, location, and timezone
+    INPUT: long (integer), lat (integer), date (string), timezone (string)
+    OUTPUT: data (dictionary)
+    """
     url = f"https://archive-api.open-meteo.com/v1/archive"
     params = {
         "latitude": lat,
@@ -37,6 +47,11 @@ def get_weather_data(long, lat, date, timezone):
     return data
 
 def process_weather_data(longitude, latitude, day, timezone):
+    """
+    process query response from get_weather_data 
+    INPUT: longitude (integer), latitude (integer), day (string), timezone (string)
+    OUTPUT: weather (dictionary)
+    """
     conditions = get_weather_data(longitude, latitude, day, timezone)
     weather = {
         'date': day,
@@ -48,12 +63,22 @@ def process_weather_data(longitude, latitude, day, timezone):
     return weather
 
 def setup_db(db_name):
+    """
+    setup database connection
+    INPUT: db_name (string)
+    OUTPUT: None
+    """
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path + "/" + db_name)
     cur = conn.cursor()
     return cur, conn
 
 def make_table(cur, conn):
+    """
+    create a table for weather conditions
+    INPUT: cur (cursor), conn (connection)
+    OUTPUT: None
+    """
     cur.execute("""
             CREATE TABLE IF NOT EXISTS Weather (
                 weather_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,11 +90,24 @@ def make_table(cur, conn):
                 )    
                 """)
     conn.commit()
+    conn.close()
 
 def grab_dates(curr, conn):
-    
+    """
+    grab dates from weather database to see current dates already added
+    INPUT: curr (cursor)
+    OUTPUT: None
+    """
+    curr.execute("""
+        SELECT date FROM weather
+    """)
+    results = curr.fetchall()
+    conn.close()
+    seen = set()
+    for item in results:
+        seen.add(item[0])
+    return seen
 
-    pass
 class TestCases(unittest.TestCase):
     def setUp(self):
         pass
