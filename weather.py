@@ -103,7 +103,26 @@ def grab_dates(curr):
     return {result[0] for result in results}
 
 
-
+def add_data(days, curr, conn, lat, long, timezone):
+    current_dates = grab_dates(curr)
+    remaining = [d for d in days if d not in current_dates]
+    batch = remaining[:25]
+    
+    for day in batch:
+        raw_weather = get_weather_data(lat, long, day, timezone)
+        cleaned = process_weather_data(raw_weather)
+        curr.execute("""
+        INSERT OR IGNORE INTO weather (date, temp_mean, wind_speed, cloud_cover, precipitation) VALUES (?, ?, ?, ?, ?)
+        """, (
+            cleaned['date'],
+            cleaned['temp_mean'],
+            cleaned['wind_speed'],
+            cleaned['cloud_cover'],
+            cleaned['precipitation']
+        ))
+        count += 1
+    conn.commit()
+    return batch
 
 class TestCases(unittest.TestCase):
     def setUp(self):
