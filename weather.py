@@ -120,7 +120,6 @@ def add_data(days, curr, conn, lat, long, timezone):
             cleaned['cloud_cover'],
             cleaned['precipitation']
         ))
-        count += 1
     conn.commit()
     return batch
 
