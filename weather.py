@@ -144,8 +144,6 @@ def main():
     print(f"added {len(added)} rows")
     conn.close()
 
-    
-
 if __name__ == '__main__':
     main()
     unittest.main(verbosity=2)
