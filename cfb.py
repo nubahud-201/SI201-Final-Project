@@ -14,11 +14,12 @@ def get_api_key(filename):
     RETURNS:
         the API key as a string
     '''
+
     base_path = os.path.abspath(os.path.dirname(__file__))
     full_path = os.path.join(base_path, filename)
     with open(full_path) as f:
-        api_key = f.read().strip()
-    return api_key
+        return f.read().strip()
+
 
 
 API_KEY = get_api_key('cfb_key.txt')
@@ -37,7 +38,6 @@ def get_cfb_data(team, year):
         JSON data from the API as a Python dict
     '''
     url = "https://api.collegefootballdata.com/games"
-
     headers = {"Authorization": f"Bearer {API_KEY}"}
     params = {"year": year, "team": team}
 
@@ -46,20 +46,16 @@ def get_cfb_data(team, year):
     return response.json()
 
 
-def process_cfb_data(raw_data):
+
+def process_cfb_data(raw_data, TEAM="Michigan"):
     games = []
-    TEAM = "Michigan"
-    # updated
 
     for g in raw_data:
-        # Date
+        # Clean date
         date_raw = g.get("startDate", "unknown")
-        if "T" in date_raw:
-            date_clean = date_raw.split("T")[0]
-        else:
-            date_clean = date_raw
+        date_clean = date_raw.split("T")[0] if "T" in date_raw else date_raw
 
-        # Teams and points
+        # Teams and scores
         home_team = g.get("homeTeam", "unknown")
         away_team = g.get("awayTeam", "unknown")
 
@@ -97,7 +93,6 @@ def setup_db(db_name):
     RETURNS:
         cursor, connection
     '''
-    import sqlite3
     conn = sqlite3.connect(db_name)
     cur = conn.cursor()
     print(f"[SETUP] Connected to database: {db_name}")
@@ -106,56 +101,74 @@ def setup_db(db_name):
 
 
 
+def create_opponent_table(cur):
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS opponents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE
+        )
+    ''')
+
+
+def get_opponent_id(cur, opponent_name):
+    # Check if opponent exists
+    cur.execute("SELECT id FROM opponents WHERE name = ?", (opponent_name,))
+    row = cur.fetchone()
+
+    if row:
+        return row[0]
+
+    # Insert new opponent
+    cur.execute("INSERT INTO opponents (name) VALUES (?)", (opponent_name,))
+    return cur.lastrowid
+
 
 def store_cfb_data(games, db_name):
-    '''
-    Stores processed game data into a SQLite database.
-
-    ARGUMENTS:
-        games: list of processed game dicts
-        db_name: database filename
-
-    RETURNS:
-        None
-    '''
     cur, conn = setup_db(db_name)
+
+    # Create required tables
+    create_opponent_table(cur)
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS cfb_games (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
-            opponent TEXT,
+            opponent_id INTEGER,
             points_for INTEGER,
             points_against INTEGER,
-            home INTEGER
+            home INTEGER,
+            FOREIGN KEY(opponent_id) REFERENCES opponents(id)
         )
     ''')
 
+    # Insert the games
     for g in games:
+        opponent_id = get_opponent_id(cur, g["opponent"])
+
         cur.execute('''
-            INSERT INTO cfb_games (date, opponent, points_for, points_against, home)
+            INSERT INTO cfb_games (date, opponent_id, points_for, points_against, home)
             VALUES (?, ?, ?, ?, ?)
-        ''', (g["date"], g["opponent"], g["points_for"], g["points_against"], g["home"]))
+        ''', (g["date"], opponent_id, g["points_for"], g["points_against"], g["home"]))
 
     conn.commit()
     conn.close()
 
 
+    
+
+   
+
+
 def load_cfb_data(db_name):
-    '''
-    Loads game data from the SQLite database.
-
-    ARGUMENTS:
-        db_name: database filename
-
-    RETURNS:
-        a list of game dictionaries
-    '''
     cur, conn = setup_db(db_name)
 
-    cur.execute("SELECT date, opponent, points_for, points_against, home FROM cfb_games")
-    rows = cur.fetchall()
+    cur.execute('''
+        SELECT c.date, o.name, c.points_for, c.points_against, c.home
+        FROM cfb_games AS c
+        JOIN opponents AS o ON c.opponent_id = o.id
+    ''')
 
+    rows = cur.fetchall()
     conn.close()
 
     return [
@@ -168,6 +181,7 @@ def load_cfb_data(db_name):
         }
         for r in rows
     ]
+
 
 
 
