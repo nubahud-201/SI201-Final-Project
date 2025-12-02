@@ -138,7 +138,7 @@ class TestCases(unittest.TestCase):
         
 def main():
     dates = generate_dates("2025-09-01", "2025-11-25")
-    cur, conn = setup_db("weather.db")
+    cur, conn = setup_db("temp.db")
     make_table(cur, conn)
     added = add_data(dates, cur, conn, 42.2808, -83.7430, "America/New_York")
     print(f"added {len(added)} rows")

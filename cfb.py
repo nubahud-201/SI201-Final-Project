@@ -109,7 +109,7 @@ def create_opponent_table(cur):
         )
     ''')
 
-#helopers for storing data with foreign keys
+#helpers for storing data with foreign keys
 def get_opponent_id(cur, opponent_name):
     # Check if opponent exists
     cur.execute("SELECT id FROM opponents WHERE name = ?", (opponent_name,))
