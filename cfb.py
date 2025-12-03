@@ -93,7 +93,8 @@ def setup_db(db_name):
     RETURNS:
         cursor, connection
     '''
-    conn = sqlite3.connect(db_name)
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path + "/" + db_name)
     cur = conn.cursor()
     print(f"[SETUP] Connected to database: {db_name}")
     return cur, conn
@@ -246,10 +247,10 @@ def main():
     print("\nTotal games across all years:", len(all_games))
 
     # Store all games in the database
-    store_cfb_data(all_games, "cfb.db")
+    store_cfb_data(all_games, "temp.db")
 
     # Confirm database row count
-    count = load_cfb_data("cfb.db")
+    count = load_cfb_data("temp.db")
     print("\nRows currently stored in the database:", count)
 
 
