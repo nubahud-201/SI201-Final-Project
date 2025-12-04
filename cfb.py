@@ -2,6 +2,7 @@ import os
 import requests
 import sqlite3
 import unittest
+from weather import create_dates_table, insert_dates, get_date_id, grab_dates
 
 
 def get_api_key(filename):

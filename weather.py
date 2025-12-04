@@ -49,13 +49,8 @@ def get_weather_data(lat, long, date, timezone):
         "timezone": timezone
     }
     resp = requests.get(url, params=params)
-    if resp.status_code == 200:
-        if resp.get('Response') == 'False':
-            return None
-        data = resp.json()
-        return data
-    if resp.status_code != 200:
-        return None
+    data = resp.json()
+    return data
 
 
 def process_weather_data(conditions):
@@ -93,12 +88,12 @@ def make_table(cur, conn):
     cur.execute("""
             CREATE TABLE IF NOT EXISTS Weather (
                 weather_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT,
+                date_id INTEGER,
                 temp_mean INTEGER,
                 wind_speed INTEGER NULL,
                 cloud_cover INTEGER,
-                precipitation INTEGER
-                FOREIGN KEY(date) REFERENCES dates(id)
+                precipitation INTEGER,
+                FOREIGN KEY(date_id) REFERENCES dates(id)
                 )    
                 """)
     conn.commit()
@@ -113,24 +108,27 @@ def create_dates_table(cur, conn):
     ''')
     conn.commit()
 
+def insert_dates(cur, conn, days):
+    for day in days:
+        cur.execute("""INSERT OR IGNORE INTO dates (day) VALUES (?)""", (day,))
+    conn.commit()
 
 def get_date_id(cur, date):
     cur.execute("SELECT id FROM dates WHERE day = ?", (date,))
-    row = cur.fetchone()
-    if row:
-        return row[0]
-    cur.execute("INSERT INTO dates (day) VALUES (?)", (date,))
-    return cur.lastrowid
+    result = cur.fetchone()
+    if result is None:
+        return None
+    return result[0]
 
 
 def grab_dates(curr):
     """
-    grab dates from date table to see current dates already added
+    grab dates from weather table to see current dates already added
     INPUT: curr (cursor)
     OUTPUT: None
     """
     curr.execute("""
-        SELECT day FROM dates
+        SELECT dates.day FROM dates JOIN Weather ON Weather.date_id = dates.id WHERE Weather.date_id IS NOT NULL
     """)
     results = curr.fetchall()
     return {result[0] for result in results}
@@ -144,13 +142,11 @@ def add_data(days, curr, conn, lat, long, timezone):
     for day in batch:
         raw_weather = get_weather_data(lat, long, day, timezone)
         cleaned = process_weather_data(raw_weather)
+        date_id = get_date_id(curr, day)
         curr.execute("""
-
-                """)
-        curr.execute("""
-        INSERT OR IGNORE INTO weather (temp_mean, wind_speed, cloud_cover, precipitation) VALUES (?, ?, ?, ?)
+        INSERT OR IGNORE INTO weather (date_id, temp_mean, wind_speed, cloud_cover, precipitation) VALUES (?, ?, ?, ?, ?)
         """, (
-            cleaned['date'],
+            date_id,
             cleaned['temp_mean'],
             cleaned['wind_speed'],
             cleaned['cloud_cover'],
@@ -176,15 +172,16 @@ class TestCases(unittest.TestCase):
 def main():
     all_days = []
     dates = [('2023-09-02', '2023-12-03'), ('2024-01-01', '2024-01-09'), ('2022-09-03', '2022-12-31'), ('2021-09-04', '2021-12-05')]
-    for day in dates:
-        lst_dates = generate_dates(day[0], day[1])
-        all_days.extend(lst_dates)
-    # dates = generate_dates("2025-09-01", "2025-11-25")
+    for start, end in dates:
+        all_days.extend(generate_dates(start, end))
+    
     cur, conn = setup_db("temp.db")
     make_table(cur, conn)
-    create_dates_table(cur)
-    # added = add_data(all_days, cur, conn, ANN_ARBOR[0], ANN_ARBOR[1], TIMEZONE)
-    # print(f"added {len(added)} rows")
+    create_dates_table(cur, conn)
+    insert_dates(cur, conn, all_days)
+
+    added = add_data(all_days, cur, conn, ANN_ARBOR[0], ANN_ARBOR[1], TIMEZONE)
+    print(f"added {len(added)} rows")
     conn.close()
 
 if __name__ == '__main__':
