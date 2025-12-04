@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 #ann arbor coordinates to query weather api
 ANN_ARBOR = (42.2808, -83.7430)
 
-#timezone name to query weather api 
+#eastern timezone name to query weather api 
 TIMEZONE = "America/New_York"
 
 def generate_dates(start, end):
@@ -22,7 +22,7 @@ def generate_dates(start, end):
     current = start_date
     while current <= end_date:
         all_dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=1)
+        current += timedelta(days=2)
     return all_dates
 
 def get_weather_data(lat, long, date, timezone):
@@ -165,13 +165,15 @@ class TestCases(unittest.TestCase):
         expected = {'date': '2025-09-02', 'temp_mean': 66.4, 'wind_speed': 3.6, 'cloud_cover': 5, 'precipitation': 0.0}
         self.assertEqual(w_data, expected)
     def test_generate_dates(self):
-        expected_dates = ['2025-09-01', '2025-09-02']
+        expected_dates = ['2025-09-02']
         dates = generate_dates('2025-09-01', '2025-09-02')
         self.assertEqual(dates, expected_dates)
         
 def main():
     all_days = []
-    dates = [('2023-09-02', '2023-12-03'), ('2024-01-01', '2024-01-09'), ('2022-09-03', '2022-12-31'), ('2021-09-04', '2021-12-05')]
+    dates = [('2023-09-02', '2023-12-03'), ('2024-01-01', '2024-01-09'), ('2022-01-01', '2022-12-31'), ('2021-01-01', '2021-12-05'), 
+             ('2020-01-01', '2020-11-28'), ('2019-08-31', '2019-11-30'), ('2018-09-01', '2018-09-01'), ('2018-01-01', '2018-12-29'), ('2017-09-02', '2017-11-25'),
+             ('2016-09-03', '2016-12-31')]
     for start, end in dates:
         all_days.extend(generate_dates(start, end))
     
