@@ -22,7 +22,7 @@ def generate_dates(start, end):
     current = start_date
     while current <= end_date:
         all_dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=2)
+        current += timedelta(days=7)
     return all_dates
 
 def get_weather_data(lat, long, date, timezone):
@@ -157,15 +157,13 @@ def add_data(days, curr, conn, lat, long, timezone):
     return batch
 
 class TestCases(unittest.TestCase):
-    def setUp(self):
-        pass
     def test_weather(self):
         raw = get_weather_data(42.2808, -83.7430, '2025-09-02', "America/New_York")
         w_data = process_weather_data(raw)
         expected = {'date': '2025-09-02', 'temp_mean': 66.4, 'wind_speed': 3.6, 'cloud_cover': 5, 'precipitation': 0.0}
         self.assertEqual(w_data, expected)
     def test_generate_dates(self):
-        expected_dates = ['2025-09-02']
+        expected_dates = ['2025-09-01']
         dates = generate_dates('2025-09-01', '2025-09-02')
         self.assertEqual(dates, expected_dates)
         
