@@ -142,17 +142,35 @@ def store_cfb_data(games, db_name):
         )
     ''')
 
-    # Insert the games
-    for g in games:
-        opponent_id = get_opponent_id(cur, g["opponent"])
+    # Batch size
+    batch_size = 25
 
-        cur.execute('''
+    # Process in batches of 25
+    for i in range(0, len(games), batch_size):
+        batch = games[i:i + batch_size]
+
+        inserts = []
+        for g in batch:
+            opponent_id = get_opponent_id(cur, g["opponent"])
+            inserts.append((
+                g["date"],
+                opponent_id,
+                g["points_for"],
+                g["points_against"],
+                g["home"]
+            ))
+
+        # Insert the batch
+        cur.executemany('''
             INSERT INTO cfb_games (date, opponent_id, points_for, points_against, home)
             VALUES (?, ?, ?, ?, ?)
-        ''', (g["date"], opponent_id, g["points_for"], g["points_against"], g["home"]))
+        ''', inserts)
+
+        print(f"Inserted batch {i//batch_size + 1}")
 
     conn.commit()
     conn.close()
+
 
 
     
