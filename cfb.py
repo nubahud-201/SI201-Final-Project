@@ -146,6 +146,7 @@ def store_cfb_data(games, db_name):
     # Batch size
     batch_size = 25
 
+
     # Process in batches of 25
     for i in range(0, len(games), batch_size):
         batch = games[i:i + batch_size]
@@ -161,7 +162,7 @@ def store_cfb_data(games, db_name):
                 g["home"]
             ))
 
-        # Insert the batch
+        # Insert the batch into the databasel
         cur.executemany('''
             INSERT INTO cfb_games (date, opponent_id, points_for, points_against, home)
             VALUES (?, ?, ?, ?, ?)
