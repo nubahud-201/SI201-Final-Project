@@ -43,20 +43,20 @@ def get_cfb_data(team, year):
     params = {"year": year, "team": team}
 
     response = requests.get(url, headers=headers, params=params)
-    print(response)
+    print(f"[DEBUG] API response for {team} {year}: {response}")
     return response.json()
 
 
 
 def process_cfb_data(raw_data, TEAM="Michigan"):
+    """
+    Cleans and processes API JSON into a list of games.
+    """
     games = []
-
     for g in raw_data:
-        # Clean date
         date_raw = g.get("startDate", "unknown")
         date_clean = date_raw.split("T")[0] if "T" in date_raw else date_raw
 
-        # Teams and scores
         home_team = g.get("homeTeam", "unknown")
         away_team = g.get("awayTeam", "unknown")
 
@@ -79,6 +79,7 @@ def process_cfb_data(raw_data, TEAM="Michigan"):
             "home": home
         })
 
+    print(f"[DEBUG] First 3 processed games: {games[:3]}")
     return games
 
 
@@ -110,127 +111,117 @@ def create_opponent_table(cur):
             name TEXT UNIQUE
         )
     ''')
+    print("[DEBUG] Opponents table ensured.")
 
 #helpers for storing data with foreign keys
 def get_opponent_id(cur, opponent_name):
-    # Check if opponent exists
     cur.execute("SELECT id FROM opponents WHERE name = ?", (opponent_name,))
     row = cur.fetchone()
-
     if row:
         return row[0]
-
-    # Insert new opponent
     cur.execute("INSERT INTO opponents (name) VALUES (?)", (opponent_name,))
     return cur.lastrowid
 
+def get_date_id(cur, date_str):
+    cur.execute("SELECT id FROM dates WHERE day = ?", (date_str,))
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    print(f"[DEBUG] Date not found in dates table: {date_str}")
+    return None
 
-def store_cfb_data(games, db_name):
-    cur, conn = setup_db(db_name)
+def load_cfb_data(cur):
+    cur.execute('''
+        SELECT c.id, d.day, o.name, c.points_for, c.points_against, c.home
+        FROM cfb_games AS c
+        JOIN opponents AS o ON c.opponent_id = o.id
+        JOIN dates AS d ON c.date_id = d.id
+    ''')
+    rows = cur.fetchall()
+    print(f"[DEBUG] Loaded {len(rows)} rows from cfb_games")
+    return [
+        {"game_id": r[0], "date": r[1], "opponent": r[2], "points_for": r[3], "points_against": r[4], "home": r[5]}
+        for r in rows
+    ]
 
-    # Create required tables
+
+
+def store_cfb_data(games, cur, conn):
+    # Ensure opponents and cfb_games tables exist
     create_opponent_table(cur)
-
     cur.execute('''
         CREATE TABLE IF NOT EXISTS cfb_games (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
+            date_id INTEGER,
             opponent_id INTEGER,
             points_for INTEGER,
             points_against INTEGER,
             home INTEGER,
+            FOREIGN KEY(date_id) REFERENCES dates(id),
             FOREIGN KEY(opponent_id) REFERENCES opponents(id)
         )
     ''')
 
-    # Batch size
     batch_size = 25
 
-
-    # Process in batches of 25
     for i in range(0, len(games), batch_size):
         batch = games[i:i + batch_size]
-
         inserts = []
+
         for g in batch:
             opponent_id = get_opponent_id(cur, g["opponent"])
-            inserts.append((
-                g["date"],
-                opponent_id,
-                g["points_for"],
-                g["points_against"],
-                g["home"]
-            ))
+            date_id = get_date_id(cur, g["date"])
+            if date_id is None:
+                # Insert missing date
+                cur.execute("INSERT INTO dates (day) VALUES (?)", (g["date"],))
+                date_id = cur.lastrowid
+                print(f"[INFO] Added missing date {g['date']}")
 
-        # Insert the batch into the databasel
-        cur.executemany('''
-            INSERT INTO cfb_games (date, opponent_id, points_for, points_against, home)
-            VALUES (?, ?, ?, ?, ?)
-        ''', inserts)
+            inserts.append((date_id, opponent_id, g["points_for"], g["points_against"], g["home"]))
 
-        print(f"Inserted batch {i//batch_size + 1}")
+        if inserts:
+            cur.executemany('''
+                INSERT INTO cfb_games (date_id, opponent_id, points_for, points_against, home)
+                VALUES (?, ?, ?, ?, ?)
+            ''', inserts)
+            print(f"Inserted batch {i//batch_size + 1}")
 
     conn.commit()
-    conn.close()
 
 
 
-    
 
-   
-
-
-def load_cfb_data(db_name):
-    cur, conn = setup_db(db_name)
-
-    cur.execute('''
-        SELECT c.date, o.name, c.points_for, c.points_against, c.home
-        FROM cfb_games AS c
-        JOIN opponents AS o ON c.opponent_id = o.id
-    ''')
-
-    rows = cur.fetchall()
-    conn.close()
-
-    return [
-        {
-            "date": r[0],
-            "opponent": r[1],
-            "points_for": r[2],
-            "points_against": r[3],
-            "home": r[4]
-        }
-        for r in rows
-    ]
 
 
 
 
 # UNIT TESTS 
 
-class TestCases(unittest.TestCase):
+import unittest
+
+class TestCFBFunctions(unittest.TestCase):
 
     def setUp(self):
-        # ensure we can read the key
-        self.cfb_key = get_api_key("cfb_key.txt")
+        # Ensure the API key loads correctly
+        self.api_key = get_api_key("cfb_key.txt")
 
     def test_get_api_key(self):
-        hidden_key = get_api_key("cfb_key.txt")
-        self.assertEqual(API_KEY, hidden_key)
+        # Make sure the global API_KEY matches what we read from the file
+        key_from_file = get_api_key("cfb_key.txt")
+        self.assertEqual(API_KEY, key_from_file)
 
-    def test_process_cfb_data(self):
-        # mock API sample
+    def test_process_cfb_data_home_game(self):
+        # Mock raw data from API for a home game
         sample_raw = [
             {
-                "start_date": "2023-10-14T19:00Z",
-                "home_team": "Michigan",
-                "away_team": "Indiana",
-                "home_points": 52,
-                "away_points": 7
+                "startDate": "2023-10-14T19:00Z",
+                "homeTeam": "Michigan",
+                "awayTeam": "Indiana",
+                "homePoints": 52,
+                "awayPoints": 7
             }
         ]
-
-        processed = process_cfb_data(sample_raw)
+        processed = process_cfb_data(sample_raw, TEAM="Michigan")
 
         expected = {
             "date": "2023-10-14",
@@ -242,41 +233,89 @@ class TestCases(unittest.TestCase):
 
         self.assertEqual(processed[0], expected)
 
+    def test_process_cfb_data_away_game(self):
+        # Mock raw data from API for an away game
+        sample_raw = [
+            {
+                "startDate": "2023-09-20T19:00Z",
+                "homeTeam": "Ohio State",
+                "awayTeam": "Michigan",
+                "homePoints": 24,
+                "awayPoints": 30
+            }
+        ]
+        processed = process_cfb_data(sample_raw, TEAM="Michigan")
+
+        expected = {
+            "date": "2023-09-20",
+            "opponent": "Ohio State",
+            "points_for": 30,
+            "points_against": 24,
+            "home": 0
+        }
+
+        self.assertEqual(processed[0], expected)
+
+    def test_process_cfb_data_missing_keys(self):
+        # Handles case when API response is missing expected keys
+        sample_raw = [{}]  # empty dict
+        processed = process_cfb_data(sample_raw, TEAM="Michigan")
+
+        expected = {
+            "date": "unknown",
+            "opponent": "unknown",
+            "points_for": 0,
+            "points_against": 0,
+            "home": 0
+        }
+
+        self.assertEqual(processed[0], expected)
+
+
+
+
+
 
 def main():
     print("MAIN IS RUNNING")
+    db_name = "temp.db"
+    cur, conn = setup_db(db_name)
 
+    # Step 1: Check if dates table exists before CFB insert
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dates'")
+    if cur.fetchone():
+        print("[CHECK] Dates table exists.")
+    else:
+        print("[CHECK] Dates table does NOT exist!")
+
+    cur.execute("SELECT COUNT(*) FROM dates")
+    print("[CHECK] Dates table row count:", cur.fetchone()[0])
+
+    # Step 2: Pull CFB data
     team = "Michigan"
-    years = [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016]   # <-- add/remove years as needed
-
+    years = [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016]
     all_games = []
 
     for y in years:
-        print(f"\nPulling data for {team} in {y}...")
+        print(f"\n[API] Pulling data for {team} in {y}...")
         raw = get_cfb_data(team, y)
-
         if not raw:
-            print(f"No data found for {y}")
+            print(f"[API] No data found for {y}")
             continue
-
         processed = process_cfb_data(raw)
-        print(f"Processed {len(processed)} games from {y}")
-
+        print(f"[API] Processed {len(processed)} games from {y}")
         all_games.extend(processed)
 
-    print("\nTotal games across all years:", len(all_games))
+    print("\n[INFO] Total games across all years:", len(all_games))
 
-    # Store all games in the database
-    store_cfb_data(all_games, "temp.db")
+    # Step 3: Store games
+    store_cfb_data(all_games, cur, conn)
 
-    # Confirm database row count
-    count = load_cfb_data("temp.db")
-    print("\nRows currently stored in the database:", count)
+    # Step 4: Verify inserted rows
+    all_rows = load_cfb_data(cur)
+    print("\n[INFO] Rows currently stored in cfb_games table:", len(all_rows))
 
-
-    
-
-
-if __name__ == "__main__":
+    conn.close()
+if __name__ == '__main__':
     main()
-    #unittest.main(verbosity=2)
+    unittest.main(verbosity=2)
