@@ -1,10 +1,11 @@
 import sqlite3
 import matplotlib.pyplot as plt
-
+import os
 DB_NAME = "temp.db"
 
 def fetch_game_weather_data():
-    conn = sqlite3.connect(DB_NAME)
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path + "/" + DB_NAME)
     cur = conn.cursor()
 
     query = '''

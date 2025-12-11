@@ -304,6 +304,8 @@ def main():
             continue
         processed = process_cfb_data(raw)
         print(f"[API] Processed {len(processed)} games from {y}")
+        if len(processed) == 25:
+            break
         all_games.extend(processed)
 
     print("\n[INFO] Total games across all years:", len(all_games))
