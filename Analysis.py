@@ -32,6 +32,7 @@ def fetch_game_weather_data():
 
 
 
+
 # ------------------ ANALYSIS FUNCTIONS ------------------
 
 def precipitation_analysis(games):
@@ -61,6 +62,7 @@ def wind_home_advantage(games):
     return averages
 
 
+
 # ------------------ GRAPHING FUNCTIONS ------------------
 
 def plot_precipitation_graph(rain_percentage):
@@ -79,23 +81,34 @@ def plot_wind_graph(averages):
         averages["high_wind_away"]
     ]
 
-    plt.bar(labels, values)
+    plt.bar(labels, values, color='orange')
     plt.xticks(rotation=20)
     plt.ylabel("Average Points Scored")
     plt.title("Points Scored by Wind Speed + Home/Away")
     plt.show()
-    plt.close()
-
+    plt.close()            
 
 # ------------------ MAIN ------------------
 
 def main():
     print("ANALYSIS STARTING...\n")
+    filename = 'results.txt'
     games = fetch_game_weather_data()
-    print(f"Total games fetched with weather data: {len(games)}\n")
-
+    total_games = f"Total games fetched with weather data: {len(games)}\n"
+    print(total_games)
     rain_percentage = precipitation_analysis(games)
     averages = wind_home_advantage(games)
+
+    base_path = os.path.abspath(os.path.dirname(__file__))
+    full_path = os.path.join(base_path, filename)
+    with open(full_path, "w") as file:
+        file.write(f"{total_games}")
+        file.write(f"Average points for low wind home: {averages['low_wind_home']}\n")
+        file.write(f"Average points for high wind home: {averages['high_wind_home']}\n")
+        file.write(f"Average points for low wind away: {averages['low_wind_away']}\n")
+        file.write(f"Average points for high wind away: {averages['high_wind_away']}\n")
+        file.write(f"Percentage of points scored in games with precipitation: {rain_percentage:.2f}%\n")
+
 
     
     print("DEBUG averages =", averages)

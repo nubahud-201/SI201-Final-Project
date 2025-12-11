@@ -1,0 +1,7 @@
+Total games fetched with weather data: 264
+Rain percentage: 56.45933014354066
+Average points for low wind home: 37.5
+Average points for high wind home: 0
+Average points for low wind away: 37.0
+Average points for high wind away: 52.0
+Percentage of points scored in games with precipitation: 56.46%

@@ -10,6 +10,9 @@ ANN_ARBOR = (42.2808, -83.7430)
 #eastern timezone name to query weather api 
 TIMEZONE = "America/New_York"
 
+#Set the limit to how many items can be added to the database
+BATCH_SIZE = 25
+
 def generate_dates(start, end):
     """
     generate a list of dates depending on a date range from a starting date to an ending date
@@ -137,7 +140,7 @@ def grab_dates(curr):
 def add_data(days, curr, conn, lat, long, timezone):
     current_dates = grab_dates(curr)
     remaining = [d for d in days if d not in current_dates]
-    batch = remaining[:25]
+    batch = remaining[:BATCH_SIZE]
     
     for day in batch:
         raw_weather = get_weather_data(lat, long, day, timezone)

@@ -2,7 +2,6 @@ import os
 import requests
 import sqlite3
 import unittest
-from weather import create_dates_table, insert_dates, get_date_id, grab_dates
 
 
 def get_api_key(filename):
@@ -161,39 +160,42 @@ def store_cfb_data(games, cur, conn):
             FOREIGN KEY(opponent_id) REFERENCES opponents(id)
         )
     ''')
+    rows_db = cur.fetchall()
+    games_db = set()
+    for row in rows_db:
+        current = (row[0], row[1], row[2], row[3], row[4])
+        games_db.add(current)
+
+    remaining = []
+    for g in games:
+        current = (g["date"], g["opponent"], g["points_for"], g["points_against"], g["home"])
+        if current not in games_db:
+            remaining.append(g)
+    
 
     batch_size = 25
+    batch = remaining[:batch_size]
+    inserts = []
+    for g in batch:
+        opponent_id = get_opponent_id(cur, g["opponent"])
+        date_id = get_date_id(cur, g["date"])
+        if date_id is None:
+            # Insert missing date
+            cur.execute("INSERT INTO dates (day) VALUES (?)", (g["date"],))
+            date_id = cur.lastrowid
+            print(f"[INFO] Added missing date {g['date']}")
 
-    for i in range(0, len(games), batch_size):
-        batch = games[i:i + batch_size]
-        inserts = []
+        inserts.append((date_id, opponent_id, g["points_for"], g["points_against"], g["home"]))
 
-        for g in batch:
-            opponent_id = get_opponent_id(cur, g["opponent"])
-            date_id = get_date_id(cur, g["date"])
-            if date_id is None:
-                # Insert missing date
-                cur.execute("INSERT INTO dates (day) VALUES (?)", (g["date"],))
-                date_id = cur.lastrowid
-                print(f"[INFO] Added missing date {g['date']}")
-
-            inserts.append((date_id, opponent_id, g["points_for"], g["points_against"], g["home"]))
-
-        if inserts:
-            cur.executemany('''
-                INSERT INTO cfb_games (date_id, opponent_id, points_for, points_against, home)
-                VALUES (?, ?, ?, ?, ?)
-            ''', inserts)
-            print(f"Inserted batch {i//batch_size + 1}")
+    if inserts:
+        cur.executemany('''
+            INSERT INTO cfb_games (date_id, opponent_id, points_for, points_against, home)
+            VALUES (?, ?, ?, ?, ?)
+        ''', inserts)
+        print(f"Inserted {len(inserts)} rows")
 
     conn.commit()
-
-
-
-
-
-
-
+    return batch
 
 # UNIT TESTS 
 
@@ -304,14 +306,15 @@ def main():
             continue
         processed = process_cfb_data(raw)
         print(f"[API] Processed {len(processed)} games from {y}")
-        if len(processed) == 25:
-            break
         all_games.extend(processed)
 
     print("\n[INFO] Total games across all years:", len(all_games))
 
     # Step 3: Store games
-    store_cfb_data(all_games, cur, conn)
+    inserted = store_cfb_data(all_games, cur, conn)
+    print(f"[INFO] Added {len(inserted)} new games in this run")
+
+
 
     # Step 4: Verify inserted rows
     all_rows = load_cfb_data(cur)
