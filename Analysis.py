@@ -108,7 +108,7 @@ def pts_by_cloud(games):
 
 def plot_precipitation_graph(rain_percentage):
     plt.bar(["Precipitation", "No Precipitation"], [rain_percentage, 100 - rain_percentage])
-    plt.title("Percent of Points Scored in Precipitation Games")
+    plt.title("Percent of Points Scored in Precipitation Michigan Football Games")
     plt.ylabel("Percentage (%)")
     plt.show()
     plt.close()
@@ -144,11 +144,11 @@ def plot_pts_cloud(avg):
     points_against = [avg["Below 50% Against"], avg["Above 50% Against"]]
     plt.figure(figsize=(8,6))
     colors = ["orange", "#319E84"]
-    plt.bar(categories, points_for, label="Points For", color=colors[1])
-    plt.bar(categories, points_against, bottom=points_for, label="Points Against", color=colors[0])  
+    plt.bar(categories, points_for, label="Home Points", color=colors[1])
+    plt.bar(categories, points_against, bottom=points_for, label="Away Points", color=colors[0])  
 
     plt.ylabel("Average Points")
-    plt.title("Average Points at Home by Cloud Cover")
+    plt.title("Average Points Scored By Michigan Football vs. Opponent")
     plt.legend()
     plt.show()            
 
