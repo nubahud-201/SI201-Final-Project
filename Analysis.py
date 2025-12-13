@@ -138,14 +138,19 @@ def plot_pts_temp(avg_d):
     plt.show()
     plt.close()
 
-def plot_pts_cloud(avg_d):
-    colors = ["orange", "#319E84", "skyblue", "purple"]
-    plt.barh(list(avg_d.keys()), list(avg_d.values()), color=colors)
-    plt.ylabel('Cloud Coverage Percentage')
-    plt.xlabel('Points Scored')
-    plt.title('Average Points Scored by Michigan Football vs. Opponent')
-    plt.show()
-    plt.close()            
+def plot_pts_cloud(avg):
+    categories = ["Below 50%", "Above 50%"]
+    points_for = [avg["Below 50%"], avg["Above 50%"]]
+    points_against = [avg["Below 50% Against"], avg["Above 50% Against"]]
+    plt.figure(figsize=(8,6))
+    colors = ["orange", "#319E84"]
+    plt.bar(categories, points_for, label="Points For", color=colors[1])
+    plt.bar(categories, points_against, bottom=points_for, label="Points Against", color=colors[0])  
+
+    plt.ylabel("Average Points")
+    plt.title("Average Points at Home by Cloud Cover")
+    plt.legend()
+    plt.show()            
 
 # ------------------ MAIN ------------------
 
