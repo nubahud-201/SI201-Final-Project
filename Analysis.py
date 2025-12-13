@@ -140,9 +140,9 @@ def plot_pts_temp(avg_d):
 
 def plot_pts_cloud(avg_d):
     colors = ["orange", "#319E84", "skyblue", "purple"]
-    plt.bar(list(avg_d.keys()), list(avg_d.values()), color=colors)
-    plt.xlabel('Cloud Coverage Percentage')
-    plt.ylabel('Points Scored')
+    plt.barh(list(avg_d.keys()), list(avg_d.values()), color=colors)
+    plt.ylabel('Cloud Coverage Percentage')
+    plt.xlabel('Points Scored')
     plt.title('Average Points Scored by Michigan Football vs. Opponent')
     plt.show()
     plt.close()            
