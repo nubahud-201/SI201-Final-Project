@@ -104,6 +104,13 @@ def setup_db(db_name):
 
 
 def create_opponent_table(cur):
+    """
+    Create a table for various opponents in college football
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+    RETURNS: 
+        None
+    """
     cur.execute('''
         CREATE TABLE IF NOT EXISTS opponents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,6 +121,16 @@ def create_opponent_table(cur):
 
 #helpers for storing data with foreign keys
 def get_opponent_id(cur, opponent_name):
+
+    """
+    Find a specific opponent id for an opponent in opponents table
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        opponent_name: opponent to find (string)
+    RETURNS: 
+        None
+    """
+
     cur.execute("SELECT id FROM opponents WHERE name = ?", (opponent_name,))
     row = cur.fetchone()
     if row:
@@ -122,6 +139,14 @@ def get_opponent_id(cur, opponent_name):
     return cur.lastrowid
 
 def get_date_id(cur, date_str):
+    """
+    Find a specific date id for a date in dates table
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        date_str: date to find (string)
+    RETURNS: 
+        None
+    """
     cur.execute("SELECT id FROM dates WHERE day = ?", (date_str,))
     row = cur.fetchone()
     if row:
@@ -130,6 +155,13 @@ def get_date_id(cur, date_str):
     return None
 
 def load_cfb_data(cur):
+    """
+    Load current data about University of Michigan football games from database
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+    RETURNS: 
+        None
+    """
     cur.execute('''
         SELECT c.id, d.day, o.name, c.points_for, c.points_against, c.home
         FROM cfb_games AS c
@@ -146,6 +178,16 @@ def load_cfb_data(cur):
 
 
 def store_cfb_data(games, cur, conn):
+    """
+    Add data from College Football Data api to database in batches of 25 items
+    ARGUMENTS:
+        games: different University of Michigan football games with their statistics (dictionary)
+        curr: cursor to execute SQL commands (cursor)
+        conn: connection to link to database file  (connection)
+    RETURNS:
+        batch: a list of 25 items added to database
+
+    """
     # Ensure opponents and cfb_games tables exist
     create_opponent_table(cur)
     cur.execute('''
@@ -272,11 +314,6 @@ class TestCFBFunctions(unittest.TestCase):
         }
 
         self.assertEqual(processed[0], expected)
-
-
-
-
-
 
 def main():
     print("MAIN IS RUNNING")

@@ -4,20 +4,25 @@ import requests
 import os
 from datetime import datetime, timedelta
 
-#ann arbor coordinates to query weather api
+# Ann arbor coordinates to query weather api
 ANN_ARBOR = (42.2808, -83.7430)
 
-#eastern timezone name to query weather api 
+# Eastern timezone name to query weather api 
 TIMEZONE = "America/New_York"
 
-#Set the limit to how many items can be added to the database
+# Set the limit to how many items can be added to the database
 BATCH_SIZE = 25
 
 def generate_dates(start, end):
     """
-    generate a list of dates depending on a date range from a starting date to an ending date
-    INPUT: start (string), end (string)
-    OUTPUT: all_dates (list)
+    Generate a list of dates depending on a date range from a starting date to an ending date
+
+    ARGUMENTS: 
+        start: the start date (string)
+        end: the end date (string)
+
+    RETURN:
+        all_dates: all the dates generated (list)
     """
     start_date = datetime.strptime(start, "%Y-%m-%d").date()
     end_date = datetime.strptime(end, "%Y-%m-%d").date()
@@ -30,9 +35,14 @@ def generate_dates(start, end):
 
 def get_weather_data(lat, long, date, timezone):
     """
-    query openmeteo api to get weather data depending on a date, location, and timezone
-    INPUT: long (integer), lat (integer), date (string), timezone (string)
-    OUTPUT: data (dictionary)
+    Query openmeteo api to get weather data depending on a date, location, and timezone
+    ARGUMENTS:
+        long: longitude (integer)
+        lat: latitude (integer)
+        date: the day's date (string)
+        timezone (string)
+    OUTPUT: 
+        data: JSON data from weather api about previous weather conditions (dictionary)
     """
     url = f"https://archive-api.open-meteo.com/v1/archive"
     params = {
@@ -58,9 +68,11 @@ def get_weather_data(lat, long, date, timezone):
 
 def process_weather_data(conditions):
     """
-    process query response from get_weather_data 
-    INPUT: conditions (dictionary)
-    OUTPUT: weather (dictionary)
+    Process query response from get_weather_data 
+    ARGUMENTS:
+        conditions: different types of weather conditons from Open Meteo api (dictionary)
+    RETURN:
+        weather: the date and four categories of weather conditions (dictionary)
     """
     weather = {
         'date': conditions['daily']['time'][0],
@@ -73,9 +85,11 @@ def process_weather_data(conditions):
 
 def setup_db(db_name):
     """
-    setup database connection
-    INPUT: db_name (string)
-    OUTPUT: None
+    Setup a database connection
+    ARGUMENTS: 
+        db_name: the name of the database (string)
+    RETURNS:
+        None
     """
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path + "/" + db_name)
@@ -84,9 +98,12 @@ def setup_db(db_name):
 
 def make_table(cur, conn):
     """
-    create a table for weather conditions
-    INPUT: cur (cursor), conn (connection)
-    OUTPUT: None
+    Create a table for weather conditions
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        conn: connection to link to database file  (connection)
+    RETURNS: 
+        None
     """
     cur.execute("""
             CREATE TABLE IF NOT EXISTS Weather (
@@ -103,6 +120,14 @@ def make_table(cur, conn):
 
 
 def create_dates_table(cur, conn):
+    """
+    Create a table for various dates
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        conn: connection to link to database file  (connection)
+    RETURNS: 
+        None
+    """
     cur.execute('''
         CREATE TABLE IF NOT EXISTS dates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,11 +137,27 @@ def create_dates_table(cur, conn):
     conn.commit()
 
 def insert_dates(cur, conn, days):
+    """
+    Insert various dates into dates table
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        conn: connection to link to database file  (connection)
+    RETURNS: 
+        None
+    """
     for day in days:
         cur.execute("""INSERT OR IGNORE INTO dates (day) VALUES (?)""", (day,))
     conn.commit()
 
 def get_date_id(cur, date):
+    """
+    Find a specific date id for a date in dates table
+    ARGUMENTS: 
+        cur: cursor to execute SQL commands (cursor)
+        date: date to find (string)
+    RETURNS: 
+        None
+    """
     cur.execute("SELECT id FROM dates WHERE day = ?", (date,))
     result = cur.fetchone()
     if result is None:
@@ -126,9 +167,11 @@ def get_date_id(cur, date):
 
 def grab_dates(curr):
     """
-    grab dates from weather table to see current dates already added
-    INPUT: curr (cursor)
-    OUTPUT: None
+    Grab dates from weather table to see current dates already added
+    ARGUMENTS:
+        cur: cursor to execute SQL commands (cursor)
+    RETURNS: 
+        None
     """
     curr.execute("""
         SELECT dates.day FROM dates JOIN Weather ON Weather.date_id = dates.id WHERE Weather.date_id IS NOT NULL
@@ -138,6 +181,20 @@ def grab_dates(curr):
 
 
 def add_data(days, curr, conn, lat, long, timezone):
+    """
+    Add data from Open Meteo weather api to database in batches of 25 items
+    ARGUMENTS:
+        days: a list of dates to add to dates table
+        curr: cursor to execute SQL commands (cursor)
+        conn: connection to link to database file  (connection)
+        lat: latitude (integer)
+        long: longitude (integer)
+        timezone: timezone for location (string)
+    RETURNS:
+        batch: a list of 25 items added to database
+
+    """
+
     current_dates = grab_dates(curr)
     remaining = [d for d in days if d not in current_dates]
     batch = remaining[:BATCH_SIZE]
@@ -160,11 +217,15 @@ def add_data(days, curr, conn, lat, long, timezone):
     return batch
 
 class TestCases(unittest.TestCase):
+
+    #Testing weather api
     def test_weather(self):
         raw = get_weather_data(42.2808, -83.7430, '2025-09-02', "America/New_York")
         w_data = process_weather_data(raw)
         expected = {'date': '2025-09-02', 'temp_mean': 66.4, 'wind_speed': 3.6, 'cloud_cover': 5, 'precipitation': 0.0}
         self.assertEqual(w_data, expected)
+    
+    #Testing if dates can be generated accurately
     def test_generate_dates(self):
         expected_dates = ['2025-09-01']
         dates = generate_dates('2025-09-01', '2025-09-02')
