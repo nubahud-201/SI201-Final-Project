@@ -154,7 +154,7 @@ def plot_precipitation_graph(rain_percentage):
 
     plt.bar(["Precipitation", "No Precipitation"], [rain_percentage, 100 - rain_percentage])
     plt.title("Percent of Points Scored in Precipitation Michigan Football Games")
-    plt.ylabel("Percentage (%)")
+    plt.ylabel("Points Scored")
     plt.show()
     plt.close()
 
