@@ -50,6 +50,11 @@ def get_cfb_data(team, year):
 def process_cfb_data(raw_data, TEAM="Michigan"):
     """
     Cleans and processes API JSON into a list of games.
+    ARGUMENTS:
+        raw_data: query from College Football Data API (JSON)
+        TEAM: Michigan football team (string)
+    RETURNS:
+        games: a record of Michigan football games (list)
     """
     games = []
     for g in raw_data:

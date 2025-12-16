@@ -41,7 +41,7 @@ def get_weather_data(lat, long, date, timezone):
         lat: latitude (integer)
         date: the day's date (string)
         timezone (string)
-    OUTPUT: 
+    RETURNS: 
         data: JSON data from weather api about previous weather conditions (dictionary)
     """
     url = f"https://archive-api.open-meteo.com/v1/archive"

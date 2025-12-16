@@ -1,4 +1,4 @@
-Total games fetched with weather data: 264
+Total games fetched with weather data: 176
 Average points for low wind home: 37.5
 Average points for high wind home: 0
 Average points for low wind away: 37.0
